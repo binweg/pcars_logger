@@ -4,7 +4,7 @@ import csv
 from collections import namedtuple
 
 ParticipantInfo = namedtuple('ParticipantInfo',
-    ['current_lap_distance', 'current_lap'])
+    ['current_lap_distance', 'current_lap', 'x', 'y', 'z'])
 
 SessionState = namedtuple('SessionState',
     ['current_lap', 'current_lap_time', 'current_lap_invalid'])
@@ -15,19 +15,22 @@ def current_lap_is_invalid(race_state):
 def unpack_float(buffer):
     return struct.unpack('f', buffer)[0]
 
+def int_from_bytes(buffer, signed=False):
+    return int.from_bytes(buffer, byteorder='little', signed=signed)
+
 def unpack_participant_info(buffer):
     p_info = ParticipantInfo(
-        current_lap_distance=int.from_bytes(buffer[6:8], byteorder='little'),
+        current_lap_distance=int_from_bytes(buffer[6:8]),
         current_lap=buffer[10],
+        x = int_from_bytes(buffer=buffer[0:2], signed=True),
+        z = int_from_bytes(buffer=buffer[2:4], signed=True), # UP in game coordinates
+        y = int_from_bytes(buffer=buffer[4:6], signed=True),
     )
     return p_info
 
 def is_new_lap(old_session_state, session_state):
     return (old_session_state.current_lap_time == -1.0 and session_state.current_lap_time > 0 \
         or session_state.current_lap == old_session_state.current_lap + 1)
-
-def int_from_bytes(buffer):
-    return int.from_bytes(buffer, byteorder='little')
 
 pc_port = 5606
 
@@ -41,7 +44,7 @@ track_data_rows = []
 
 with open('trackdata.csv', 'w', newline='') as track_file:
     writer = csv.writer(track_file)
-    writer.writerow(['lap', 'pos', 'speed', 'throttle', 'brake', 'steering', 'gear'])
+    writer.writerow(['lap', 'pos', 'speed', 'throttle', 'brake', 'steering', 'gear', 'x', 'y', 'z'])
     while True:
         data = sock.recv(2048)
         if len(data) == 1367: #Telemetry
@@ -84,6 +87,10 @@ with open('trackdata.csv', 'w', newline='') as track_file:
                     brake,
                     steering,
                     gear,
+                    participant_info.x,
+                    participant_info.y,
+                    participant_info.z,
                 ))
+            print(participant_info.x, participant_info.y, participant_info.z)
         if len(data) == 1347:
             pass
