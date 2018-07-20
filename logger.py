@@ -91,6 +91,5 @@ with open('trackdata.csv', 'w', newline='') as track_file:
                     participant_info.y,
                     participant_info.z,
                 ))
-            print(participant_info.x, participant_info.y, participant_info.z)
         if len(data) == 1347:
             pass
